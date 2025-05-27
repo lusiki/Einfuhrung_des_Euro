@@ -13,34 +13,50 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
-```{r }
+```{r echo=FALSE, eval=TRUE, message=FALSE, warning=FALSE}
 library(ggplot2)
 library(dplyr)
 library(readr)
 library(readxl)
 library(tidyr)
 library(data.table)
-
+library(openxlsx)
 
 
 ```
 
 
 
-```{r echo=FALSE}
-# import data from root directory
-
-# Assuming the data is in an Excel file named "data.xlsx" in the current working directory
+```{r echo=FALSE, eval=FALSE}
 
 data_0 <- read_excel("./data.xlsx", sheet = 1, col_names = TRUE)
 data_1 <- read_excel("./filtered_with_keywords_22.xlsx", sheet = 1, col_names = TRUE)
 data_2 <- read_excel("./filtered_with_keywords_23.xlsx", sheet = 1, col_names = TRUE)
 data_3 <- bind_rows(data_1, data_2)
-
-#
-
-
-
+data <- merge(data_0, data_3, by = "URL", all.x = TRUE)
+write.xlsx(data, file = "dta.xlsx", row.names = FALSE, col.names = TRUE)
 
 ```
+
+
+
+```{r echo=FALSE, eval=TRUE}
+data <- read_excel("./dta.xlsx", sheet = 1, col_names = TRUE)
+
+```
+
+```{r echo=FALSE, eval=TRUE}
+names(data)
+```
+
+```{r echo=FALSE, eval=TRUE}
+summary(data)
+```
+
+
+
+
+
+
+
 
