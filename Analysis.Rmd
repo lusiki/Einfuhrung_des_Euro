@@ -21,7 +21,9 @@ library(readxl)
 library(tidyr)
 library(data.table)
 library(openxlsx)
-
+library(tidyverse)
+library(lubridate)
+library(hms)
 
 ```
 
@@ -52,6 +54,287 @@ names(data)
 ```{r echo=FALSE, eval=TRUE}
 summary(data)
 ```
+
+
+
+```{r prepare-data, echo=FALSE, eval=TRUE}
+# Assume your data frame is named `df`. If not, replace `df` everywhere below
+# Convert DATE to Date class, TIME to hms, extract HOUR, and ensure OKVIR is a factor
+df <- data %>%
+  mutate(
+    # DATE comes in as "YYYY-MM-DD ..." so:
+    DATE = as.Date(DATE),
+    # Parse TIME (character) into hms; if TIME is like "HH:MM:SS":
+    TIME = as_hms(TIME),
+    # Extract the hour (0–23) for “vrijeme objave” analysis:
+    HOUR = hour(TIME),
+    # Treat OKVIR as a categorical (factor) variable:
+    OKVIR = factor(OKVIR),
+    # Create a simpler column for “Medij” (media outlet). 
+    # Here I assume `FROM_SITE` holds the media name; rename as MEDIJ:
+    MEDIJ = FROM_SITE
+  )
+
+```
+
+
+### OKVIR × MEDIJ
+
+
+
+- Kontigencija OKVIR by MEDIJ
+- Vizualizacija udjela članaka po medijima i OKVIRima
+- Chi-kvadrat test za provjeru nezavisnosti
+
+```{r echo=FALSE, eval=TRUE}
+
+df %>% 
+  count(MEDIJ, OKVIR) %>% 
+  pivot_wider(names_from = OKVIR, values_from = n, values_fill = 0) 
+
+
+
+
+```
+
+```{r echo=FALSE, eval=TRUE}
+df %>%
+  count(MEDIJ, OKVIR) %>%
+  group_by(MEDIJ) %>%
+  mutate(prop = n / sum(n)) %>%
+  ungroup() %>%
+  ggplot(aes(x = fct_reorder(MEDIJ, -prop), y = prop, fill = OKVIR)) +
+  geom_col(position = "stack") +
+  coord_flip() +
+  labs(
+    x = "MEDIJ",
+    y = "Udio članaka",
+    fill = "OKVIR",
+    title = "Proporcija OKVIRa po medijima"
+  ) +
+  theme_minimal()
+```
+
+```{r echo=FALSE, eval=TRUE}
+tbl <- table(df$MEDIJ, df$OKVIR)
+chisq_res <- chisq.test(tbl)
+chisq_res
+```
+
+### 2) OKVIR x “vrijeme objave” (TIME / HOUR)
+
+
+- A boxplot of HOUR x OKVIR
+- A summary table (median, IQR of HOUR per OKVIR)
+- (Optional) Kruskal‐Wallis test to see if the distribution of HOUR differs across OKVIR
+
+
+```{r okvir-vs-hour-summary, echo=FALSE, eval=F}
+# 2a) Summary statistics of HOUR by OKVIR
+df %>%
+  group_by(OKVIR) %>%
+  summarize(
+    n = n(),
+    median_hour = median(HOUR, na.rm = TRUE),
+    IQR_hour = IQR(HOUR, na.rm = TRUE)
+  ) 
+
+
+```
+
+
+```{r okvir-vs-hour-plot, echo=FALSE, eval=F, fig.width=7, fig.height=4}
+# 2b) Boxplot: HOUR distribution by OKVIR
+ggplot(df, aes(x = OKVIR, y = HOUR)) +
+  geom_boxplot(outlier.shape = 1, notch = TRUE) +
+  labs(
+    x = "OKVIR",
+    y = "Publication hour (0–23)",
+    title = "Distribution of publication hour by OKVIR"
+  ) +
+  theme_minimal()
+
+```
+
+
+```{r okvir-vs-hour-test, echo=FALSE, eval=F}
+# 2c) Kruskal-Wallis test: Is HOUR different across OKVIR categories?
+kruskal.test(HOUR ~ OKVIR, data = df)
+
+
+```
+
+
+### 3) OKVIR x Izvor
+
+
+- Boxplot of IZVORI x OKVIR
+- Summary table (mean, median of IZVORI per OKVIR)
+- Kruskal‐Wallis or ANOVA
+
+
+```{r okvir-vs-izvori-summary, echo=FALSE, eval=TRUE}
+# 3a) Summary statistics of IZVORI by OKVIR
+df %>%
+  group_by(OKVIR) %>%
+  summarize(
+    #calculate mode for IZVORI
+    mode_izvori = as.character(names(sort(table(IZVORI), decreasing = TRUE)[1])),
+    
+  ) 
+
+```
+
+
+
+```{r okvir-vs-izvori-plot, echo=FALSE, eval=TRUE, fig.width=7, fig.height=4}
+# 3b) Boxplot: IZVORI distribution by OKVIR
+ggplot(df, aes(x = OKVIR, y = IZVORI)) +
+  geom_boxplot(outlier.size = 1) +
+  labs(
+    x = "OKVIR",
+    y = "Broj izvora (IZVORI)",
+    title = "Distrinucija IZVORI x OKVIR"
+  ) +
+  theme_minimal()
+
+
+```
+
+```{r okvir-vs-izvori-test , echo=FALSE, eval=TRUE}
+# 3c) Kruskal-Wallis: IZVORI ~ OKVIR
+kruskal.test(IZVORI ~ OKVIR, data = df)
+
+```
+
+
+
+### 4) OKVIR x Sentiment
+
+```{r okvir-vs-sentiment-summary , echo=FALSE, eval=TRUE}
+# 4a) Count of SENTIMENT × OKVIR
+df %>%
+  count(OKVIR, SENTIMENT) %>%
+  pivot_wider(names_from = SENTIMENT, values_from = n, values_fill = 0) 
+```
+
+```{r okvir-vs-sentiment-plot, fig.width=7, fig.height=5, echo=FALSE, eval=TRUE}
+# 4b) Proportional bar chart: SENTIMENT within each OKVIR
+df %>%
+  count(OKVIR, SENTIMENT) %>%
+  group_by(OKVIR) %>%
+  mutate(prop = n / sum(n)) %>%
+  ungroup() %>%
+  ggplot(aes(x = OKVIR, y = prop, fill = factor(SENTIMENT))) +
+  geom_col(position = "stack") +
+  labs(
+    x = "OKVIR",
+    y = "Proportion",
+    fill = "SENTIMENT",
+    title = "Distribution of sentiment levels across OKVIR"
+  ) +
+  theme_minimal()
+
+
+```
+
+
+
+
+
+```{r okvir-vs-sentiment-test , echo=FALSE, eval=TRUE}
+# 4c) If SENTIMENT is treated numerically, compare medians by OKVIR:
+kruskal.test(SENTIMENT ~ OKVIR, data = df)
+
+```
+
+### 5) OKVIR x Doseg (reach)
+
+
+
+```{r okvir-vs-doseg-summary, echo=FALSE, eval=TRUE}
+# 5a) Summary stats of DOSEG by OKVIR
+df %>%
+  group_by(OKVIR) %>%
+  summarize(
+    n = n(),
+    mean_reach = mean(DOSEG, na.rm = TRUE),
+    median_reach = median(DOSEG, na.rm = TRUE),
+    IQR_reach = IQR(DOSEG, na.rm = TRUE)
+  ) 
+
+
+```
+
+
+
+```{r okvir-vs-doseg-plot, fig.width=7, fig.height=4, echo=FALSE, eval=TRUE}
+# 5b) Boxplot (plus jitter) of DOSEG by OKVIR
+ggplot(df, aes(x = OKVIR, y = DOSEG)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.6) +
+  geom_jitter(width = 0.2, alpha = 0.3, size = 0.7) +
+  labs(
+    x = "OKVIR",
+    y = "Reach (DOSEG)",
+    title = "DOSEG distribution across OKVIR categories"
+  ) +
+  theme_minimal()
+```
+
+```{r okvir-vs-doseg-test,echo=FALSE, eval=TRUE}
+# 5c) Kruskal-Wallis test for DOSEG ~ OKVIR
+kruskal.test(DOSEG ~ OKVIR, data = df)
+```
+
+
+### 6) OKVIR x Komentari (comments)
+
+```{r okvir-vs-komentari-summary,echo=FALSE, eval=TRUE}
+# 6a) Summary stats of KOMENTARI by OKVIR
+df %>%
+  group_by(OKVIR) %>%
+  summarize(
+    n = n(),
+    mean_comments = mean(KOMENTARI, na.rm = TRUE),
+    median_comments = median(KOMENTARI, na.rm = TRUE),
+    IQR_comments = IQR(KOMENTARI, na.rm = TRUE)
+  ) 
+
+```
+
+
+
+
+```{r okvir-vs-komentari-plot, fig.width=7, fig.height=4,echo=FALSE, eval=TRUE}
+# 6b) Boxplot (plus jitter) of KOMENTARI by OKVIR
+ggplot(df, aes(x = OKVIR, y = KOMENTARI)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.6) +
+  geom_jitter(width = 0.2, alpha = 0.3, size = 0.7, color = "steelblue") +
+  labs(
+    x = "OKVIR",
+    y = "Number of comments (KOMENTARI)",
+    title = "KOMENTARI distribution across OKVIR categories"
+  ) +
+  theme_minimal()
+```
+
+```{r okvir-vs-komentari-test,echo=FALSE, eval=TRUE}
+# 6c) Kruskal-Wallis test: KOMENTARI ~ OKVIR
+kruskal.test(KOMENTARI ~ OKVIR, data = df)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
