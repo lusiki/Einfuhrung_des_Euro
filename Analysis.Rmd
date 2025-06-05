@@ -62,29 +62,27 @@ summary(data)
 # Convert DATE to Date class, TIME to hms, extract HOUR, and ensure OKVIR is a factor
 df <- data %>%
   mutate(
-    # DATE comes in as "YYYY-MM-DD ..." so:
-    DATE = as.Date(DATE),
-    # Parse TIME (character) into hms; if TIME is like "HH:MM:SS":
-    TIME = as_hms(TIME),
-    # Extract the hour (0–23) for “vrijeme objave” analysis:
-    HOUR = hour(TIME),
-    # Treat OKVIR as a categorical (factor) variable:
+    # Parse DATE and TIME
+    DATE  = as.Date(DATE),
+    TIME  = as_hms(TIME),
+    
+    # Extract hour
+    HOUR  = hour(TIME),
+    
+    # Convert OKVIR to factor
     OKVIR = factor(OKVIR),
-    # Create a simpler column for “Medij” (media outlet). 
-    # Here I assume `FROM_SITE` holds the media name; rename as MEDIJ:
+    
+    # Extract month name (full name) as an ordered factor (Jan → December)
+    MONTH = month(DATE, label = TRUE, abbr = FALSE),
+    
+    # Rename FROM_SITE → MEDIJ
     MEDIJ = FROM_SITE
   )
-
 ```
 
 
-### OKVIR × MEDIJ
+### 1) OKVIR × MEDIJ
 
-
-
-- Kontigencija OKVIR by MEDIJ
-- Vizualizacija udjela članaka po medijima i OKVIRima
-- Chi-kvadrat test za provjeru nezavisnosti
 
 ```{r echo=FALSE, eval=TRUE}
 
@@ -121,23 +119,19 @@ chisq_res <- chisq.test(tbl)
 chisq_res
 ```
 
-### 2) OKVIR x “vrijeme objave” (TIME / HOUR)
+### 2) OKVIR x “vrijeme objave” (MONTH)
 
 
-- A boxplot of HOUR x OKVIR
-- A summary table (median, IQR of HOUR per OKVIR)
-- (Optional) Kruskal‐Wallis test to see if the distribution of HOUR differs across OKVIR
-
-
-```{r okvir-vs-hour-summary, echo=FALSE, eval=F}
-# 2a) Summary statistics of HOUR by OKVIR
+```{r okvir-vs-hour-summary, echo=FALSE, eval=T}
 df %>%
-  group_by(OKVIR) %>%
+  group_by(OKVIR,MONTH) %>%
   summarize(
-    n = n(),
-    median_hour = median(HOUR, na.rm = TRUE),
-    IQR_hour = IQR(HOUR, na.rm = TRUE)
+    n=n(),
+    
   ) 
+
+
+
 
 
 ```
@@ -145,12 +139,12 @@ df %>%
 
 ```{r okvir-vs-hour-plot, echo=FALSE, eval=F, fig.width=7, fig.height=4}
 # 2b) Boxplot: HOUR distribution by OKVIR
-ggplot(df, aes(x = OKVIR, y = HOUR)) +
-  geom_boxplot(outlier.shape = 1, notch = TRUE) +
+ggplot(df, aes(x = OKVIR, y = MONTH)) +
+  geom_boxplot() +
   labs(
     x = "OKVIR",
-    y = "Publication hour (0–23)",
-    title = "Distribution of publication hour by OKVIR"
+    y = "Publication MONTH",
+    title = "Distribution of publication MONTH by OKVIR"
   ) +
   theme_minimal()
 
@@ -159,7 +153,7 @@ ggplot(df, aes(x = OKVIR, y = HOUR)) +
 
 ```{r okvir-vs-hour-test, echo=FALSE, eval=F}
 # 2c) Kruskal-Wallis test: Is HOUR different across OKVIR categories?
-kruskal.test(HOUR ~ OKVIR, data = df)
+kruskal.test(MONTH ~ OKVIR, data = df)
 
 
 ```
@@ -168,9 +162,6 @@ kruskal.test(HOUR ~ OKVIR, data = df)
 ### 3) OKVIR x Izvor
 
 
-- Boxplot of IZVORI x OKVIR
-- Summary table (mean, median of IZVORI per OKVIR)
-- Kruskal‐Wallis or ANOVA
 
 
 ```{r okvir-vs-izvori-summary, echo=FALSE, eval=TRUE}
