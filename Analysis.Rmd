@@ -87,7 +87,7 @@ summary(data)
 
 
 
-```{r prepare-data, echo=FALSE, eval=TRUE}
+```{r prepare-data, echo=F, eval=T, message=F , warning= FALSE}
 # Assume your data frame is named `df`. If not, replace `df` everywhere below
 # Convert DATE to Date class, TIME to hms, extract HOUR, and ensure OKVIR is a factor
 df <- data %>%
@@ -249,7 +249,7 @@ n_tokenTidy %>%
 
 ## STEMMING
 
-```{r}
+```{r echo=F, eval=T, message=F , warning= FALSE}
 # Apply stemming to the "word" column
 tidy_text_ <- n_tokenTidy %>%
   mutate(
@@ -268,7 +268,7 @@ tidy_text_ <- tidy_text_ %>%
 ```
 
 
-```{r}
+```{r echo=F, eval=T, message=F , warning= FALSE}
 process_in_batches <- function(data, batch_size = 1000) {
   total_rows <- nrow(data)
   num_batches <- ceiling(total_rows / batch_size)
@@ -350,7 +350,7 @@ tidy_text_ <- process_in_batches(n_tokenTidy, batch_size)
 tidy_CSX <- process_in_batches(Crosentilex_sve, batch_size)
 ```
 
-```{r}
+```{r echo=F, eval=T, message=F , warning= FALSE}
 tidy_text_ %>%
   group_by(stemmed_word) %>%
   summarise(count = n()) %>%
@@ -361,7 +361,7 @@ tidy_text_ %>%
 ```
 ##### Doprinos riječi sentimentu (crosentilex)
 
-```{r}
+```{r echo=F, eval=T, message=F , warning= FALSE}
 doprinos_sentimentu <- function(dataset, no = n) {
 dataset %>%
   inner_join(CroSentilex_Gold, by = "word") %>% 
@@ -702,7 +702,7 @@ n_tokenTidy %>%
 
 ## STEMMING
 
-```{r}
+```{r echo=F, eval=T, message=F , warning= FALSE}
 # Apply stemming to the "word" column
 tidy_text_ <- n_tokenTidy %>%
   mutate(
@@ -721,7 +721,7 @@ tidy_text_ <- tidy_text_ %>%
 ```
 
 
-```{r}
+```{r echo=F, eval=T, message=F , warning= FALSE}
 process_in_batches <- function(data, batch_size = 1000) {
   total_rows <- nrow(data)
   num_batches <- ceiling(total_rows / batch_size)
@@ -803,7 +803,7 @@ tidy_text_ <- process_in_batches(n_tokenTidy, batch_size)
 tidy_CSX <- process_in_batches(Crosentilex_sve, batch_size)
 ```
 
-```{r}
+```{r echo=F, eval=T, message=F , warning= FALSE}
 tidy_text_ %>%
   group_by(stemmed_word) %>%
   summarise(count = n()) %>%
@@ -814,7 +814,7 @@ tidy_text_ %>%
 ```
 ##### Doprinos riječi sentimentu (crosentilex)
 
-```{r}
+```{r echo=F, eval=T, message=F , warning= FALSE}
 doprinos_sentimentu <- function(dataset, no = n) {
 dataset %>%
   inner_join(CroSentilex_Gold, by = "word") %>% 
@@ -1122,7 +1122,7 @@ top_terms %>%
 ### 1) OKVIR × MEDIJ
 
 
-```{r echo=FALSE, eval=TRUE}
+```{r echo=F, eval=T, message=F , warning= FALSE}
 
 df %>% 
   count(MEDIJ, OKVIR) %>% 
@@ -1133,7 +1133,7 @@ df %>%
 
 ```
 
-```{r echo=FALSE, eval=TRUE}
+```{r echo=F, eval=T, message=F , warning= FALSE}
 df %>%
   count(MEDIJ, OKVIR) %>%
   group_by(MEDIJ) %>%
@@ -1151,13 +1151,13 @@ df %>%
   theme_minimal()
 ```
 
-```{r echo=FALSE, eval=TRUE}
+```{r echo=F, eval=T, message=F , warning= FALSE}
 tbl <- table(df$MEDIJ, df$OKVIR)
 chisq_res <- chisq.test(tbl)
 chisq_res
 ```
 
-```{r}
+```{r echo=F, eval=T, message=F , warning= FALSE}
 # show 20 most frequent words per OKVIR from this object tidy_text_
 
 tidy_text_ %>%
@@ -1188,7 +1188,7 @@ tidy_text_ %>%
 ```
 
 
-```{r}
+```{r echo=F, eval=T, message=F , warning= FALSE}
 tidy_text_ %>%
   group_by(OKVIR, word) %>%
   summarise(n = n(), .groups = 'drop') %>%
@@ -1217,7 +1217,7 @@ tidy_text_ %>%
 ### 2) OKVIR x “vrijeme objave” (MONTH)
 
 
-```{r okvir-vs-hour-summary, echo=FALSE, eval=T}
+```{r okvir-vs-hour-summary, eecho=F, eval=T, message=F , warning= FALSE}
 df %>%
   group_by(OKVIR,MONTH) %>%
   summarize(
@@ -1232,7 +1232,7 @@ df %>%
 ```
 
 
-```{r okvir-vs-hour-plot, echo=FALSE, eval=F, fig.width=7, fig.height=4}
+```{r okvir-vs-hour-plot, echo=F, eval=T, message=F , warning= FALSE, fig.width=7, fig.height=4}
 # 2b) Boxplot: HOUR distribution by OKVIR
 ggplot(df, aes(x = OKVIR, y = MONTH)) +
   geom_boxplot() +
@@ -1259,7 +1259,7 @@ kruskal.test(MONTH ~ OKVIR, data = df)
 
 
 
-```{r okvir-vs-izvori-summary, echo=FALSE, eval=TRUE}
+```{r okvir-vs-izvori-summary, echo=F, eval=T, message=F , warning= FALSE}
 # 3a) Summary statistics of IZVORI by OKVIR
 df %>%
   group_by(OKVIR) %>%
@@ -1294,7 +1294,7 @@ kruskal.test(IZVORI ~ OKVIR, data = df)
 ```
 
 
-```{r}
+```{r echo=F, eval=T, message=F , warning= FALSE}
 tidy_text_ %>%
   group_by(IZVORI, word) %>%
   summarise(n = n(), .groups = 'drop') %>%
@@ -1396,14 +1396,14 @@ ggplot(df, aes(x = OKVIR, y = DOSEG)) +
   theme_minimal()
 ```
 
-```{r okvir-vs-doseg-test,echo=FALSE, eval=TRUE}
+```{r okvir-vs-doseg-test,echo=F, eval=T, message=F , warning= FALSE}
 # 5c) Kruskal-Wallis test for DOSEG ~ OKVIR
 kruskal.test(DOSEG ~ OKVIR, data = df)
 ```
 
 
 
-```{r}
+```{r echo=F, eval=T, message=F , warning= FALSE}
 tidy_text_ %>%
   group_by(DOSEG, word) %>%
   summarise(n = n(), .groups = 'drop') %>%
