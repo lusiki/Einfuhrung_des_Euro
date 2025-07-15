@@ -6,9 +6,11 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-
-
+knitr::opts_chunk$set(
+  echo    = FALSE,   # hide code
+  message = FALSE,   # hide package startup messages
+  warning = FALSE    # hide warnings
+)
 
 ```
 
@@ -74,7 +76,6 @@ source(here("Text_analysis", "write_tokens.R"))
 
 ```{r echo=FALSE, eval=TRUE}
 data <- read_excel("./dta.xlsx", sheet = 1, col_names = TRUE)
-
 ```
 
 ```{r echo=FALSE, eval=TRUE}
@@ -86,7 +87,6 @@ summary(data)
 ```
 
 
-
 ```{r prepare-data, echo=F, eval=T, message=F , warning= FALSE}
 # Assume your data frame is named `df`. If not, replace `df` everywhere below
 # Convert DATE to Date class, TIME to hms, extract HOUR, and ensure OKVIR is a factor
@@ -95,16 +95,12 @@ df <- data %>%
     # Parse DATE and TIME
     DATE  = as.Date(DATE),
     TIME  = as_hms(TIME),
-    
     # Extract hour
     HOUR  = hour(TIME),
-    
     # Convert OKVIR to factor
     OKVIR = factor(OKVIR),
-    
     # Extract month name (full name) as an ordered factor (Jan → December)
     MONTH = month(DATE, label = TRUE, abbr = FALSE),
-    
     # Rename FROM_SITE → MEDIJ
     MEDIJ = FROM_SITE
   )
@@ -113,7 +109,7 @@ df <- data %>%
 
 # Text analysis (TITLE)
 
-```{r echo=F, eval=T, message=F , warning= FALSE}
+```{r echo=F, eval=F, message=F , warning= FALSE}
 # read in lexicons
 CroSentilex_n <- read.delim("C:/Users/Lukas/Dropbox/Mislav@Luka/crosentilex-negatives.txt",
                                    header = FALSE,
@@ -211,7 +207,7 @@ stop_corpus <- stop_corpus %>%
 #head(sample_n(stop_corpus,100),15)
 ```
 
-```{r echo=F, eval=T, message=F , warning= FALSE}
+```{r echo=F, eval=F, message=F , warning= FALSE}
 # dim before tokenize
 #dim(dta)
 
@@ -249,7 +245,7 @@ n_tokenTidy %>%
 
 ## STEMMING
 
-```{r echo=F, eval=T, message=F , warning= FALSE}
+```{r echo=F, eval=F, message=F , warning= FALSE}
 # Apply stemming to the "word" column
 tidy_text_ <- n_tokenTidy %>%
   mutate(
@@ -268,7 +264,7 @@ tidy_text_ <- tidy_text_ %>%
 ```
 
 
-```{r echo=F, eval=T, message=F , warning= FALSE}
+```{r echo=F, eval=F, message=F , warning= FALSE}
 process_in_batches <- function(data, batch_size = 1000) {
   total_rows <- nrow(data)
   num_batches <- ceiling(total_rows / batch_size)
@@ -350,7 +346,7 @@ tidy_text_ <- process_in_batches(n_tokenTidy, batch_size)
 tidy_CSX <- process_in_batches(Crosentilex_sve, batch_size)
 ```
 
-```{r echo=F, eval=T, message=F , warning= FALSE}
+```{r echo=F, eval=F, message=F , warning= FALSE}
 tidy_text_ %>%
   group_by(stemmed_word) %>%
   summarise(count = n()) %>%
@@ -361,7 +357,7 @@ tidy_text_ %>%
 ```
 ##### Doprinos riječi sentimentu (crosentilex)
 
-```{r echo=F, eval=T, message=F , warning= FALSE}
+```{r echo=F, eval=F, message=F , warning= FALSE}
 doprinos_sentimentu <- function(dataset, no = n) {
 dataset %>%
   inner_join(CroSentilex_Gold, by = "word") %>% 
@@ -397,7 +393,7 @@ doprinos_sentimentu(n_tokenTidy,30)
 
 ##### Doprinos riječi sentimentu (NRC)
 
-```{r echo=F, eval=T, message=F , warning= FALSE}
+```{r echo=F, eval=F, message=F , warning= FALSE}
 NRCpn <- LilaHR_long %>% rename("word" = "rijec") %>%
   filter(Emotion %in% c("Positive","Negative")) %>%
   mutate(Emotion = recode(Emotion,
@@ -442,7 +438,7 @@ doprinos_sentimentu(n_tokenTidy,30)
 
 ```
 ##### Doprinos riječi raznom sentimentu (NRC)
-```{r echo=F, eval=T, message=F , warning= FALSE, fig.width=16, fig.height=25}
+```{r echo=F, eval=F, message=F , warning= FALSE, fig.width=16, fig.height=25}
 
 
 NRC <- LilaHR_long %>% rename("word" = "rijec") %>%
@@ -493,7 +489,7 @@ doprinos_sentimentu_full(n_tokenTidy,20)
 
 #### Oblak riječi sa sentimentom CroSentilex
 
-```{r echo=F, eval=T, message=F , warning= FALSE}
+```{r echo=F, eval=F, message=F , warning= FALSE}
 ## ComparisonCloud
 n_tokenTidy %>%
   inner_join(CroSentilex_Gold,by="word") %>% 
@@ -511,7 +507,7 @@ n_tokenTidy %>%
 #### Oblak riječi sa sentimentom NRC
 
 
-```{r echo=F, eval=T, message=F , warning= FALSE}
+```{r echo=F, eval=F, message=F , warning= FALSE}
 n_tokenTidy %>%
   inner_join(NRCpn,by="word") %>% 
   count(word, Emotion) %>% 
@@ -523,7 +519,10 @@ n_tokenTidy %>%
   comparison.cloud(colors = c("firebrick3", "deepskyblue3","darkslategray"),
                    max.words = 120)
 ```
-```{r eval = T, echo = F, message=F, warning=F, fig.height=15, fig.width=15}
+
+
+
+```{r eval = F, echo = F, message=F, warning=F, fig.height=15, fig.width=15}
 fb_bigram <- df %>%
   unnest_tokens(bigram, TITLE, token = "ngrams", n = 2)
 #fb_bigram %>% head(10)
@@ -555,7 +554,7 @@ bigrams_united %>%
 
 #### Najčešće fraze (bigrami; moguće i za 3 ili više riječi)(txt)
 
-```{r eval = T, echo = F, message=F, warning=F, fig.height=15, fig.width=15}
+```{r eval = F, echo = F, message=F, warning=F, fig.height=15, fig.width=15}
 fb_bigram <- df %>%
   unnest_tokens(bigram, FULL_TEXT, token = "ngrams", n = 2)
 #fb_bigram %>% head(10)
@@ -589,7 +588,7 @@ bigrams_united %>%
 
 
 #### TEMATSKA ANLIZA (2 teme)
-```{r eval = T, echo = F, message=F, warning=F, fig.height=15, fig.width=15}
+```{r eval = F, echo = F, message=F, warning=F, fig.height=15, fig.width=15}
 
 dtm <- n_tokenTidy %>%
   count(URL, word) %>%
@@ -626,7 +625,7 @@ top_terms %>%
 ```
 
 #### TEMATSKA ANLIZA (3 teme)
-```{r eval = T, echo = F, message=F, warning=F, fig.height=15, fig.width=15}
+```{r eval = F, echo = F, message=F, warning=F, fig.height=15, fig.width=15}
 
 dtm <- n_tokenTidy %>%
   count(URL, word) %>%
@@ -664,7 +663,7 @@ top_terms %>%
 # Text analysis (TEXT)
 
 
-```{r echo=F, eval=T, message=F , warning= FALSE}
+```{r echo=F, eval=F, message=F , warning= FALSE}
 # dim before tokenize
 #dim(dta)
 
@@ -702,7 +701,7 @@ n_tokenTidy %>%
 
 ## STEMMING
 
-```{r echo=F, eval=T, message=F , warning= FALSE}
+```{r echo=F, eval=F, message=F , warning= FALSE}
 # Apply stemming to the "word" column
 tidy_text_ <- n_tokenTidy %>%
   mutate(
@@ -721,7 +720,7 @@ tidy_text_ <- tidy_text_ %>%
 ```
 
 
-```{r echo=F, eval=T, message=F , warning= FALSE}
+```{r echo=F, eval=F, message=F , warning= FALSE}
 process_in_batches <- function(data, batch_size = 1000) {
   total_rows <- nrow(data)
   num_batches <- ceiling(total_rows / batch_size)
@@ -803,7 +802,7 @@ tidy_text_ <- process_in_batches(n_tokenTidy, batch_size)
 tidy_CSX <- process_in_batches(Crosentilex_sve, batch_size)
 ```
 
-```{r echo=F, eval=T, message=F , warning= FALSE}
+```{r echo=F, eval=F, message=F , warning= FALSE}
 tidy_text_ %>%
   group_by(stemmed_word) %>%
   summarise(count = n()) %>%
@@ -814,7 +813,8 @@ tidy_text_ %>%
 ```
 ##### Doprinos riječi sentimentu (crosentilex)
 
-```{r echo=F, eval=T, message=F , warning= FALSE}
+```{r echo=F, eval=F, message=F , warning= FALSE, dpi = 900, fig.height=10, fig.width=10}
+
 doprinos_sentimentu <- function(dataset, no = n) {
 dataset %>%
   inner_join(CroSentilex_Gold, by = "word") %>% 
@@ -822,14 +822,14 @@ dataset %>%
   group_by(sentiment) %>%
   top_n(no) %>%
   ungroup() %>%
-  mutate(sentiment = case_when(sentiment == 0 ~ "NEUTRALNO",
-                                 sentiment == 1 ~ "NEGATIVNO",
-                                 sentiment == 2 ~ "POZITIVNO")) %>%
+  mutate(sentiment = case_when(sentiment == 0 ~ "Neutralno",
+                                 sentiment == 1 ~ "Negativno",
+                                 sentiment == 2 ~ "Pozitivno")) %>%
   mutate(word = reorder(word, n)) %>%
   ggplot(aes(word, n, fill = sentiment)) +
   geom_col(show.legend = FALSE) +
-  ggtitle( "Sentiment") +
-  labs( x = "Riječ", y = "Number of words") +
+  ggtitle( "") +
+  labs( x = "Riječ", y = "Broj riječi") +
   facet_wrap(~ sentiment, scales = "free_y") +
   coord_flip() +
   scale_fill_manual(values = c("grey40", "grey50","grey60")) +  # Assuming two sentiment values; adjust as needed
@@ -850,7 +850,7 @@ doprinos_sentimentu(n_tokenTidy,30)
 
 ##### Doprinos riječi sentimentu (NRC)
 
-```{r echo=F, eval=T, message=F , warning= FALSE}
+```{r echo=F, eval=F, message=F , warning= FALSE}
 NRCpn <- LilaHR_long %>% rename("word" = "rijec") %>%
   filter(Emotion %in% c("Positive","Negative")) %>%
   mutate(Emotion = recode(Emotion,
@@ -895,7 +895,7 @@ doprinos_sentimentu(n_tokenTidy,30)
 
 ```
 ##### Doprinos riječi raznom sentimentu (NRC)
-```{r echo=F, eval=T, message=F , warning= FALSE, fig.width=16, fig.height=25}
+```{r echo=F, eval=F, message=F , warning= FALSE, fig.width=16, fig.height=25}
 
 
 NRC <- LilaHR_long %>% rename("word" = "rijec") %>%
@@ -946,7 +946,7 @@ doprinos_sentimentu_full(n_tokenTidy,20)
 
 #### Oblak riječi sa sentimentom CroSentilex
 
-```{r echo=F, eval=T, message=F , warning= FALSE}
+```{r echo=F, eval=F, message=F , warning= FALSE}
 ## ComparisonCloud
 n_tokenTidy %>%
   inner_join(CroSentilex_Gold,by="word") %>% 
@@ -964,7 +964,7 @@ n_tokenTidy %>%
 #### Oblak riječi sa sentimentom NRC
 
 
-```{r echo=F, eval=T, message=F , warning= FALSE}
+```{r echo=F, eval=F, message=F , warning= FALSE}
 n_tokenTidy %>%
   inner_join(NRCpn,by="word") %>% 
   count(word, Emotion) %>% 
@@ -979,7 +979,7 @@ n_tokenTidy %>%
 
 
 
-```{r eval = T, echo = F, message=F, warning=F, fig.height=15, fig.width=15}
+```{r eval = F, echo = F, message=F, warning=F, fig.height=15, fig.width=15}
 fb_bigram <- df %>%
   unnest_tokens(bigram, TITLE, token = "ngrams", n = 2)
 #fb_bigram %>% head(10)
@@ -1011,7 +1011,7 @@ bigrams_united %>%
 
 #### Najčešće fraze (bigrami; moguće i za 3 ili više riječi)(txt)
 
-```{r eval = T, echo = F, message=F, warning=F, fig.height=15, fig.width=15}
+```{r eval = F, echo = F, message=F, warning=F, fig.height=15, fig.width=15}
 fb_bigram <- df %>%
   unnest_tokens(bigram, FULL_TEXT, token = "ngrams", n = 2)
 #fb_bigram %>% head(10)
@@ -1045,7 +1045,7 @@ bigrams_united %>%
 
 
 #### TEMATSKA ANLIZA (2 teme)
-```{r eval = T, echo = F, message=F, warning=F, fig.height=15, fig.width=15}
+```{r eval = F, echo = F, message=F, warning=F, fig.height=15, fig.width=15}
 
 dtm <- n_tokenTidy %>%
   count(URL, word) %>%
@@ -1082,7 +1082,7 @@ top_terms %>%
 ```
 
 #### TEMATSKA ANLIZA (3 teme)
-```{r eval = T, echo = F, message=F, warning=F, fig.height=15, fig.width=15}
+```{r eval = F, echo = F, message=F, warning=F, fig.height=15, fig.width=15}
 
 dtm <- n_tokenTidy %>%
   count(URL, word) %>%
@@ -1133,22 +1133,51 @@ df %>%
 
 ```
 
-```{r echo=F, eval=T, message=F , warning= FALSE}
+```{r echo=F, eval=T, message=F , warning= FALSE, dpi = 900, fig.height=10, fig.width=10}
+
+# 1) define your 7 OKVIR names
+okviri_all <- c(
+  "Ekonomski okvir",
+  "Politički okvir",
+  "Socijalni okvir",
+  "Nacionalni/suverenitetni okvir",
+  "Moralno/etički okvir",
+  "Tehnološko-administrativni okvir",
+  "Ostalo"
+)
+df <- df %>%
+  # assume OKVIR is an integer 1–7; if it’s character, wrap as.integer()
+  mutate(
+    okvir_nazivi = factor(
+      as.integer(OKVIR),
+      levels = seq_along(okviri_all),
+      labels = okviri_all
+    )
+  )
+
+
 df %>%
-  count(MEDIJ, OKVIR) %>%
+  count(MEDIJ, okvir_nazivi) %>%
   group_by(MEDIJ) %>%
   mutate(prop = n / sum(n)) %>%
   ungroup() %>%
-  ggplot(aes(x = fct_reorder(MEDIJ, -prop), y = prop, fill = OKVIR)) +
+  ggplot(aes(x = fct_reorder(MEDIJ, -prop), y = prop, fill = okvir_nazivi)) +
   geom_col(position = "stack") +
+  scale_fill_grey(start = 0.2, end = 0.8) +
   coord_flip() +
   labs(
-    x = "MEDIJ",
-    y = "Udio članaka",
-    fill = "OKVIR",
-    title = "Proporcija OKVIRa po medijima"
+    x = "Medij",
+    y = "Udio medijskog okvira ",
+    fill = "Medijski okvir",
+    title = ""
   ) +
   theme_minimal()
+
+
+
+
+
+
 ```
 
 ```{r echo=F, eval=T, message=F , warning= FALSE}
@@ -1157,7 +1186,7 @@ chisq_res <- chisq.test(tbl)
 chisq_res
 ```
 
-```{r echo=F, eval=T, message=F , warning= FALSE}
+```{r echo=F, eval=F, message=F , warning= FALSE}
 # show 20 most frequent words per OKVIR from this object tidy_text_
 
 tidy_text_ %>%
@@ -1188,7 +1217,7 @@ tidy_text_ %>%
 ```
 
 
-```{r echo=F, eval=T, message=F , warning= FALSE}
+```{r echo=F, eval=F, message=F , warning= FALSE}
 tidy_text_ %>%
   group_by(OKVIR, word) %>%
   summarise(n = n(), .groups = 'drop') %>%
@@ -1294,7 +1323,7 @@ kruskal.test(IZVORI ~ OKVIR, data = df)
 ```
 
 
-```{r echo=F, eval=T, message=F , warning= FALSE}
+```{r echo=F, eval=F, message=F , warning= FALSE}
 tidy_text_ %>%
   group_by(IZVORI, word) %>%
   summarise(n = n(), .groups = 'drop') %>%
@@ -1333,26 +1362,43 @@ df %>%
   pivot_wider(names_from = SENTIMENT, values_from = n, values_fill = 0) 
 ```
 
-```{r okvir-vs-sentiment-plot, fig.width=7, fig.height=5, echo=FALSE, eval=TRUE}
-# 4b) Proportional bar chart: SENTIMENT within each OKVIR
+
+```{r  echo=F, eval=T, message=F , warning= FALSE, dpi = 900, fig.height=10, fig.width=10}
 df %>%
-  count(OKVIR, SENTIMENT) %>%
-  group_by(OKVIR) %>%
+  # add the new factor variable with labels
+  mutate(
+    okvir_nazivi = factor(
+      as.integer(OKVIR),
+      levels = seq_along(okviri_all),
+      labels = okviri_all
+    )
+  ) %>%
+  # compute proportions of SENTIMENT within each okvir_nazivi
+  count(okvir_nazivi, SENTIMENT) %>%
+  group_by(okvir_nazivi) %>%
   mutate(prop = n / sum(n)) %>%
   ungroup() %>%
-  ggplot(aes(x = OKVIR, y = prop, fill = factor(SENTIMENT))) +
-  geom_col(position = "stack") +
-  labs(
-    x = "OKVIR",
-    y = "Proportion",
-    fill = "SENTIMENT",
-    title = "Distribution of sentiment levels across OKVIR"
-  ) +
-  theme_minimal()
-
-
+  # plot in black & white with custom SENTIMENT labels
+  ggplot(aes(x = okvir_nazivi, y = prop, fill = factor(SENTIMENT))) +
+    geom_col(position = "stack") +
+    scale_fill_grey(
+      start  = 0.2,
+      end    = 0.8,
+      name   = "Sentiment",
+      breaks = c("1", "2", "3"),
+      labels = c("Pozitivan", "Neutralan", "Negativan")
+    ) +
+    scale_x_discrete(limits = okviri_all) +
+    labs(
+      x     = "",
+      y     = "Udio sentimenta",
+      title = ""
+    ) +
+    theme_minimal() +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1)
+    )
 ```
-
 
 
 
@@ -1373,9 +1419,9 @@ df %>%
   group_by(OKVIR) %>%
   summarize(
     n = n(),
-    mean_reach = mean(DOSEG, na.rm = TRUE),
-    median_reach = median(DOSEG, na.rm = TRUE),
-    IQR_reach = IQR(DOSEG, na.rm = TRUE)
+    mean_reach = mean(REACH, na.rm = TRUE),
+    median_reach = median(REACH, na.rm = TRUE),
+    IQR_reach = IQR(REACH, na.rm = TRUE)
   ) 
 
 
@@ -1385,25 +1431,25 @@ df %>%
 
 ```{r okvir-vs-doseg-plot, fig.width=7, fig.height=4, echo=FALSE, eval=TRUE}
 # 5b) Boxplot (plus jitter) of DOSEG by OKVIR
-ggplot(df, aes(x = OKVIR, y = DOSEG)) +
+ggplot(df, aes(x = OKVIR, y = REACH)) +
   geom_boxplot(outlier.shape = NA, alpha = 0.6) +
   geom_jitter(width = 0.2, alpha = 0.3, size = 0.7) +
   labs(
-    x = "OKVIR",
-    y = "Reach (DOSEG)",
-    title = "DOSEG distribution across OKVIR categories"
+    x = "Okvir",
+    y = "Doseg ",
+    title = ""
   ) +
   theme_minimal()
 ```
 
 ```{r okvir-vs-doseg-test,echo=F, eval=T, message=F , warning= FALSE}
 # 5c) Kruskal-Wallis test for DOSEG ~ OKVIR
-kruskal.test(DOSEG ~ OKVIR, data = df)
+kruskal.test(OKVIR ~ REACH, data = df)
 ```
 
 
 
-```{r echo=F, eval=T, message=F , warning= FALSE}
+```{r echo=F, eval=F, message=F , warning= FALSE}
 tidy_text_ %>%
   group_by(DOSEG, word) %>%
   summarise(n = n(), .groups = 'drop') %>%
@@ -1438,9 +1484,9 @@ df %>%
   group_by(OKVIR) %>%
   summarize(
     n = n(),
-    mean_comments = mean(KOMENTARI, na.rm = TRUE),
-    median_comments = median(KOMENTARI, na.rm = TRUE),
-    IQR_comments = IQR(KOMENTARI, na.rm = TRUE)
+    mean_comments = mean(COMMENT_COUNT, na.rm = TRUE),
+    median_comments = median(COMMENT_COUNT, na.rm = TRUE),
+    IQR_comments = IQR(COMMENT_COUNT, na.rm = TRUE)
   ) 
 
 ```
@@ -1450,28 +1496,64 @@ df %>%
 
 ```{r okvir-vs-komentari-plot, fig.width=7, fig.height=4,echo=FALSE, eval=TRUE}
 # 6b) Boxplot (plus jitter) of KOMENTARI by OKVIR
-ggplot(df, aes(x = OKVIR, y = KOMENTARI)) +
+ggplot(df, aes(x = OKVIR, y = COMMENT_COUNT)) +
   geom_boxplot(outlier.shape = NA, alpha = 0.6) +
   geom_jitter(width = 0.2, alpha = 0.3, size = 0.7, color = "steelblue") +
   labs(
-    x = "OKVIR",
-    y = "Number of comments (KOMENTARI)",
-    title = "KOMENTARI distribution across OKVIR categories"
+    x = "Okvir",
+    y = "Broj komentara",
+    title = ""
   ) +
   theme_minimal()
 ```
 
 ```{r okvir-vs-komentari-test,echo=FALSE, eval=TRUE}
 # 6c) Kruskal-Wallis test: KOMENTARI ~ OKVIR
-kruskal.test(KOMENTARI ~ OKVIR, data = df)
+kruskal.test(COMMENT_COUNT ~ OKVIR, data = df)
+
 ```
 
 
+```{r  dpi = 900, fig.height=10, fig.width=10}
+df <- df %>%
+  mutate(
+    DATE_BEFORE_AFTER = if_else(
+      DATE < as.Date("2023-01-01"),
+      "Before",
+      "After"
+    )
+  )
 
 
 
+df %>%
+  count(okvir_nazivi, DATE_BEFORE_AFTER) %>%
+  group_by(okvir_nazivi) %>%
+  mutate(prop = n / sum(n)) %>%
+  ungroup() %>%
+  ggplot(aes(x = okvir_nazivi, y = prop, fill = DATE_BEFORE_AFTER)) +
+    geom_col(position = "dodge") +
+    scale_fill_grey(
+      start = 0.2,
+      end   = 0.8,
+      name  = "Period"
+    ) +
+    labs(
+      x     = "OKVIR",
+      y     = "Proportion of articles",
+      title = "Articles Before vs. After Jan 1, 2023 by Frame"
+    ) +
+    theme_minimal() +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1)
+    )
+```
 
 
+```{r}
+tab <- table(df$okvir_nazivi, df$DATE_BEFORE_AFTER)
+chisq.test(tab)
+```
 
 
 
