@@ -32,10 +32,7 @@ library(here)
 library(kableExtra)
 library(DT)
 library(purrr)
-library(data.table)
 library(tidytext)
-library(dplyr)
-library(lubridate)
 library(anytime)
 library(grid)
 library(wordcloud)
@@ -88,22 +85,49 @@ summary(data)
 
 
 ```{r prepare-data, echo=F, eval=T, message=F , warning= FALSE}
-# Assume your data frame is named `df`. If not, replace `df` everywhere below
-# Convert DATE to Date class, TIME to hms, extract HOUR, and ensure OKVIR is a factor
+
+
+okviri_all <- c(
+  "Ekonomski okvir",
+  "Politički okvir",
+  "Socijalni okvir",
+  "Nacionalni/suverenitetni okvir",
+  "Moralno/etički okvir",
+  "Tehnološko-administrativni okvir",
+  "Ostalo"
+)
+
+# cols to drop
+cols_to_remove <- c(
+  "TWEET_COUNT", "LOVE_COUNT", "WOW_COUNT", "HAHA_COUNT", "SAD_COUNT", "ANGRY_COUNT",
+  "FAVORITE_COUNT", "RETWEET_COUNT", "VIEW_COUNT", "DISLIKE_COUNT", "COUNT",
+  "REPOST_COUNT", "REDDIT_TYPE", "REDDIT_SCORE",
+  "TWEET_TYPE", "TWEET_SOURCE_NAME", "TWEET_SOURCE_URL"
+)
+
 df <- data %>%
+  # 1) parse, extract & factor
   mutate(
-    # Parse DATE and TIME
     DATE  = as.Date(DATE),
     TIME  = as_hms(TIME),
-    # Extract hour
     HOUR  = hour(TIME),
-    # Convert OKVIR to factor
-    OKVIR = factor(OKVIR),
-    # Extract month name (full name) as an ordered factor (Jan → December)
     MONTH = month(DATE, label = TRUE, abbr = FALSE),
-    # Rename FROM_SITE → MEDIJ
+    OKVIR = factor(OKVIR),
     MEDIJ = FROM_SITE
+  ) %>%
+  # 2) drop unneeded
+  select(-all_of(cols_to_remove), -FROM_SITE) %>%
+  # 3) add human‐readable frame labels
+  mutate(
+    okvir_nazivi = factor(
+      as.integer(OKVIR),
+      levels = seq_along(okviri_all),
+      labels = okviri_all
+    )
   )
+
+
+
 ```
 
 
@@ -1133,52 +1157,42 @@ df %>%
 
 ```
 
-```{r echo=F, eval=T, message=F , warning= FALSE, dpi = 900, fig.height=10, fig.width=10}
-
-# 1) define your 7 OKVIR names
-okviri_all <- c(
-  "Ekonomski okvir",
-  "Politički okvir",
-  "Socijalni okvir",
-  "Nacionalni/suverenitetni okvir",
-  "Moralno/etički okvir",
-  "Tehnološko-administrativni okvir",
-  "Ostalo"
-)
-df <- df %>%
-  # assume OKVIR is an integer 1–7; if it’s character, wrap as.integer()
-  mutate(
-    okvir_nazivi = factor(
-      as.integer(OKVIR),
-      levels = seq_along(okviri_all),
-      labels = okviri_all
-    )
-  )
-
+```{r echo=F, eval=T, message=F , warning= FALSE, dpi = 900, fig.height=6, fig.width=8}
 
 df %>%
-  count(MEDIJ, okvir_nazivi) %>%
-  group_by(MEDIJ) %>%
-  mutate(prop = n / sum(n)) %>%
-  ungroup() %>%
-  ggplot(aes(x = fct_reorder(MEDIJ, -prop), y = prop, fill = okvir_nazivi)) +
-  geom_col(position = "stack") +
-  scale_fill_grey(start = 0.2, end = 0.8) +
-  coord_flip() +
-  labs(
-    x = "Medij",
-    y = "Udio medijskog okvira ",
-    fill = "Medijski okvir",
-    title = ""
-  ) +
-  theme_minimal()
-
-
-
+  count(okvir_nazivi, MEDIJ) %>%
+  ggplot(aes(
+    x    = okvir_nazivi,
+    y    = n,
+    fill = MEDIJ
+  )) +
+    geom_col(
+      position = "dodge",
+      color    = "black",
+      width    = 0.7
+    ) +
+    scale_fill_grey(
+      start = 0.3,
+      end   = 0.8,
+      name  = "Medij"
+    ) +
+    labs(
+      x     = "Medijski okvir",
+      y     = "Broj članaka",
+      title = "Članci po okviru i mediju"
+    ) +
+    theme_minimal() +
+    theme(
+      axis.text.x        = element_text(angle = 45, hjust = 1),
+      panel.grid.major.x = element_blank(),
+      panel.grid.minor   = element_blank()
+    )
 
 
 
 ```
+
+
 
 ```{r echo=F, eval=T, message=F , warning= FALSE}
 tbl <- table(df$MEDIJ, df$OKVIR)
@@ -1242,13 +1256,12 @@ tidy_text_ %>%
 ```
 
 
-
 ### 2) OKVIR x “vrijeme objave” (MONTH)
 
 
 ```{r okvir-vs-hour-summary, eecho=F, eval=T, message=F , warning= FALSE}
-df %>%
-  group_by(OKVIR,MONTH) %>%
+df_monthly <- df %>%
+  group_by(okvir_nazivi,MONTH) %>%
   summarize(
     n=n(),
     
@@ -1261,18 +1274,39 @@ df %>%
 ```
 
 
-```{r okvir-vs-hour-plot, echo=F, eval=T, message=F , warning= FALSE, fig.width=7, fig.height=4}
-# 2b) Boxplot: HOUR distribution by OKVIR
-ggplot(df, aes(x = OKVIR, y = MONTH)) +
-  geom_boxplot() +
-  labs(
-    x = "OKVIR",
-    y = "Publication MONTH",
-    title = "Distribution of publication MONTH by OKVIR"
-  ) +
-  theme_minimal()
 
+```{r}
+#   df_monthly <- data.frame(
+#     okvir_nazivi = factor(c("Ekonomski okvir", "Ekonomski okvir", …)),
+#     MONTH        = factor(c("January","December", …), levels=month.name),
+#     n            = c(11,10, …)
+#   )
+
+
+ggplot(df_monthly, aes(x = okvir_nazivi, y = n, fill = MONTH)) +
+  geom_col(position = "dodge", color = "black") +
+  scale_fill_grey(
+    start  = 0.3,
+    end    = 0.7,
+    name   = "",                         # legend title
+    labels = c("Nakon (sijecanj)", "Prije (prosinac)")           # legend item labels
+  ) +
+  labs(
+    x     = "Medijski okvir",
+    y     = "Broj članaka",
+    title = ""
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x        = element_text(angle = 45, hjust = 1),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor   = element_blank()
+  )
 ```
+
+
+
+
 
 
 ```{r okvir-vs-hour-test, echo=FALSE, eval=F}
@@ -1300,21 +1334,41 @@ df %>%
 
 ```
 
+```{r}
+df_izvori <- data.frame(
+  OKVIR        = factor(1:7),
+  mode_izvori  = c("8","4","4","4","1","3","9"),
+  stringsAsFactors = FALSE
+) %>%
+  mutate(
+    mode_izvori = as.integer(mode_izvori),
+    okvir_nazivi = factor(
+      OKVIR,
+      levels = 1:7,
+      labels = okviri_all
+    )
+  )
 
 
-```{r okvir-vs-izvori-plot, echo=FALSE, eval=TRUE, fig.width=7, fig.height=4}
-# 3b) Boxplot: IZVORI distribution by OKVIR
-ggplot(df, aes(x = OKVIR, y = IZVORI)) +
-  geom_boxplot(outlier.size = 1) +
-  labs(
-    x = "OKVIR",
-    y = "Broj izvora (IZVORI)",
-    title = "Distrinucija IZVORI x OKVIR"
+ggplot(df_izvori, aes(x = okvir_nazivi, y = mode_izvori)) +
+  geom_col(
+    fill  = "grey70",
+    color = "black",
+    width = 0.7
   ) +
-  theme_minimal()
-
-
+  labs(
+    x     = "Medijski okvir",
+    y     = "Modalani broj izvora",
+    title = "Broj izvora po okviru"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x        = element_text(angle = 45, hjust = 1),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor   = element_blank()
+  )
 ```
+
 
 ```{r okvir-vs-izvori-test , echo=FALSE, eval=TRUE}
 # 3c) Kruskal-Wallis: IZVORI ~ OKVIR
@@ -1363,43 +1417,48 @@ df %>%
 ```
 
 
-```{r  echo=F, eval=T, message=F , warning= FALSE, dpi = 900, fig.height=10, fig.width=10}
+
+
+```{r}
 df %>%
-  # add the new factor variable with labels
-  mutate(
-    okvir_nazivi = factor(
-      as.integer(OKVIR),
-      levels = seq_along(okviri_all),
-      labels = okviri_all
-    )
-  ) %>%
-  # compute proportions of SENTIMENT within each okvir_nazivi
+  # map OKVIR → Croatian frame names
+  mutate(okvir_nazivi = factor(
+    as.integer(OKVIR),
+    levels = seq_along(okviri_all),
+    labels = okviri_all
+  )) %>%
+  # count articles by frame + sentiment
   count(okvir_nazivi, SENTIMENT) %>%
-  group_by(okvir_nazivi) %>%
-  mutate(prop = n / sum(n)) %>%
-  ungroup() %>%
-  # plot in black & white with custom SENTIMENT labels
-  ggplot(aes(x = okvir_nazivi, y = prop, fill = factor(SENTIMENT))) +
-    geom_col(position = "stack") +
+  # plot side‑by‑side bars (one per sentiment) for each frame
+  ggplot(aes(
+    x    = okvir_nazivi,
+    y    = n,
+    fill = factor(SENTIMENT)
+  )) +
+    geom_col(
+      position = position_dodge(width = 0.8),
+      color    = "black",
+      width    = 0.7
+    ) +
     scale_fill_grey(
       start  = 0.2,
       end    = 0.8,
       name   = "Sentiment",
-      breaks = c("1", "2", "3"),
-      labels = c("Pozitivan", "Neutralan", "Negativan")
+      breaks = c("1","2","3"),
+      labels = c("Pozitivan","Neutralan","Negativan")
     ) +
-    scale_x_discrete(limits = okviri_all) +
     labs(
-      x     = "",
-      y     = "Udio sentimenta",
-      title = ""
+      x     = "Medijski okvir",
+      y     = "Broj članaka",
+      title = "Članci po okviru i sentimentu"
     ) +
     theme_minimal() +
     theme(
-      axis.text.x = element_text(angle = 45, hjust = 1)
+      axis.text.x        = element_text(angle = 45, hjust = 1),
+      panel.grid.major.x = element_blank(),
+      panel.grid.minor   = element_blank()
     )
 ```
-
 
 
 
@@ -1415,7 +1474,7 @@ kruskal.test(SENTIMENT ~ OKVIR, data = df)
 
 ```{r okvir-vs-doseg-summary, echo=FALSE, eval=TRUE}
 # 5a) Summary stats of DOSEG by OKVIR
-df %>%
+df_reach <- df %>%
   group_by(OKVIR) %>%
   summarize(
     n = n(),
@@ -1431,15 +1490,49 @@ df %>%
 
 ```{r okvir-vs-doseg-plot, fig.width=7, fig.height=4, echo=FALSE, eval=TRUE}
 # 5b) Boxplot (plus jitter) of DOSEG by OKVIR
-ggplot(df, aes(x = OKVIR, y = REACH)) +
-  geom_boxplot(outlier.shape = NA, alpha = 0.6) +
-  geom_jitter(width = 0.2, alpha = 0.3, size = 0.7) +
-  labs(
-    x = "Okvir",
-    y = "Doseg ",
-    title = ""
-  ) +
-  theme_minimal()
+df_reach %>%
+  # 1) map numeric OKVIR → your Croatian labels
+  mutate(
+    okvir_nazivi = factor(
+      as.integer(OKVIR),
+      levels = seq_along(okviri_all),
+      labels = okviri_all
+    )
+  ) %>%
+  # 2) pivot the three reach columns into long form
+  pivot_longer(
+    cols      = c(mean_reach, median_reach, IQR_reach),
+    names_to  = "metric",
+    values_to = "value"
+  ) %>%
+  # 3) plot side‐by‐side bars
+  ggplot(aes(
+    x    = okvir_nazivi,
+    y    = value,
+    fill = metric
+  )) +
+    geom_col(
+      position = position_dodge(width = 0.8),
+      color    = "black",
+      width    = 0.7
+    ) +
+    scale_fill_grey(
+      start  = 0.2,
+      end    = 0.8,
+      name   = "Metrika dosega",
+      labels = c("Prosječni doseg", "Medijan dosega", "IQR dosega")
+    ) +
+    labs(
+      x     = "Medijski okvir",
+      y     = "Vrijednost",
+      title = "Doseg po okviru i metrikama"
+    ) +
+    theme_minimal() +
+    theme(
+      axis.text.x        = element_text(angle = 45, hjust = 1),
+      panel.grid.major.x = element_blank(),
+      panel.grid.minor   = element_blank()
+    )
 ```
 
 ```{r okvir-vs-doseg-test,echo=F, eval=T, message=F , warning= FALSE}
@@ -1480,7 +1573,7 @@ tidy_text_ %>%
 
 ```{r okvir-vs-komentari-summary,echo=FALSE, eval=TRUE}
 # 6a) Summary stats of KOMENTARI by OKVIR
-df %>%
+df_komentari <- df %>%
   group_by(OKVIR) %>%
   summarize(
     n = n(),
@@ -1495,16 +1588,53 @@ df %>%
 
 
 ```{r okvir-vs-komentari-plot, fig.width=7, fig.height=4,echo=FALSE, eval=TRUE}
-# 6b) Boxplot (plus jitter) of KOMENTARI by OKVIR
-ggplot(df, aes(x = OKVIR, y = COMMENT_COUNT)) +
-  geom_boxplot(outlier.shape = NA, alpha = 0.6) +
-  geom_jitter(width = 0.2, alpha = 0.3, size = 0.7, color = "steelblue") +
-  labs(
-    x = "Okvir",
-    y = "Broj komentara",
-    title = ""
-  ) +
-  theme_minimal()
+df_komentari %>%
+  # map OKVIR → human‐readable labels
+  mutate(
+    okvir_nazivi = factor(
+      as.integer(OKVIR),
+      levels = seq_along(okviri_all),
+      labels = okviri_all
+    )
+  ) %>%
+  # pivot the three comment metrics into long form
+  pivot_longer(
+    cols      = c(mean_comments, median_comments, IQR_comments),
+    names_to  = "metric",
+    values_to = "value"
+  ) %>%
+  # plot side‑by‑side bars for each metric
+  ggplot(aes(
+    x    = okvir_nazivi,
+    y    = value,
+    fill = metric
+  )) +
+    geom_col(
+      position = position_dodge(width = 0.8),
+      color    = "black",
+      width    = 0.7
+    ) +
+    scale_fill_grey(
+      start  = 0.2,
+      end    = 0.8,
+      name   = "Metrika komentara",
+      labels = c(
+        "Prosjecan broj komentara",
+        "Medijan komentara",
+        "IQR komentara"
+      )
+    ) +
+    labs(
+      x     = "Medijski okvir",
+      y     = "Vrijednost",
+      title = "Komentari po okviru i metrikama"
+    ) +
+    theme_minimal() +
+    theme(
+      axis.text.x        = element_text(angle = 45, hjust = 1),
+      panel.grid.major.x = element_blank(),
+      panel.grid.minor   = element_blank()
+    )
 ```
 
 ```{r okvir-vs-komentari-test,echo=FALSE, eval=TRUE}
@@ -1513,47 +1643,6 @@ kruskal.test(COMMENT_COUNT ~ OKVIR, data = df)
 
 ```
 
-
-```{r  dpi = 900, fig.height=10, fig.width=10}
-df <- df %>%
-  mutate(
-    DATE_BEFORE_AFTER = if_else(
-      DATE < as.Date("2023-01-01"),
-      "Before",
-      "After"
-    )
-  )
-
-
-
-df %>%
-  count(okvir_nazivi, DATE_BEFORE_AFTER) %>%
-  group_by(okvir_nazivi) %>%
-  mutate(prop = n / sum(n)) %>%
-  ungroup() %>%
-  ggplot(aes(x = okvir_nazivi, y = prop, fill = DATE_BEFORE_AFTER)) +
-    geom_col(position = "dodge") +
-    scale_fill_grey(
-      start = 0.2,
-      end   = 0.8,
-      name  = "Period"
-    ) +
-    labs(
-      x     = "OKVIR",
-      y     = "Proportion of articles",
-      title = "Articles Before vs. After Jan 1, 2023 by Frame"
-    ) +
-    theme_minimal() +
-    theme(
-      axis.text.x = element_text(angle = 45, hjust = 1)
-    )
-```
-
-
-```{r}
-tab <- table(df$okvir_nazivi, df$DATE_BEFORE_AFTER)
-chisq.test(tab)
-```
 
 
 
