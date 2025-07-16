@@ -192,6 +192,13 @@ chisq_res
 Test ne može potvrditi vezu medija i okvira.
 
 
+
+
+
+```{r echo=F, eval=T, message=F , warning= FALSE}
+# provedi fisher test
+```
+
 ```{r echo=F, eval=F, message=F , warning= FALSE}
 # show 20 most frequent words per OKVIR from this object tidy_text_
 
@@ -281,7 +288,7 @@ ggplot(df_monthly, aes(x = okvir_nazivi, y = n, fill = MONTH)) +
     start  = 0.3,
     end    = 0.7,
     name   = "",                         # legend title
-    labels = c("Nakon (sijecanj)", "Prije (prosinac)")           # legend item labels
+    labels = c("1.mjesec 2023", "12.mjesec 2022")           # legend item labels
   ) +
   labs(
     x     = "Medijski okvir",
@@ -301,7 +308,7 @@ ggplot(df_monthly, aes(x = okvir_nazivi, y = n, fill = MONTH)) +
 
 
 
-```{r okvir-vs-time, echo=FALSE, eval=F}
+```{r okvir-vs-time, echo=F, eval=T}
 okvirVStime <- tribble(
   ~okvir_nazivi,                      ~MONTH,     ~n,
   "Ekonomski okvir",                  "January",  11,
@@ -375,8 +382,8 @@ df %>%
 
 
 
-df %>%
-  select(OKVIR, IZVORI)
+# df %>%
+#   select(OKVIR, IZVORI)
 
 ```
 
@@ -404,8 +411,8 @@ ggplot(df_izvori, aes(x = okvir_nazivi, y = mode_izvori)) +
   ) +
   labs(
     x     = "Medijski okvir",
-    y     = "Modalani broj izvora",
-    title = "Broj izvora po okviru"
+    y     = "Modalni broj izvora",
+    title = ""
   ) +
   theme_minimal() +
   theme(
