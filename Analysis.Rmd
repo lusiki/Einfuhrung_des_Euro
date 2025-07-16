@@ -75,11 +75,11 @@ source(here("Text_analysis", "write_tokens.R"))
 data <- read_excel("./dta.xlsx", sheet = 1, col_names = TRUE)
 ```
 
-```{r echo=FALSE, eval=TRUE}
+```{r echo=FALSE, eval=F}
 names(data)
 ```
 
-```{r echo=FALSE, eval=TRUE}
+```{r echo=FALSE, eval=F}
 summary(data)
 ```
 
@@ -188,6 +188,9 @@ tbl <- table(df$MEDIJ, df$OKVIR)
 chisq_res <- chisq.test(tbl)
 chisq_res
 ```
+
+Test ne može potvrditi vezu medija i okvira.
+
 
 ```{r echo=F, eval=F, message=F , warning= FALSE}
 # show 20 most frequent words per OKVIR from this object tidy_text_
@@ -298,13 +301,62 @@ ggplot(df_monthly, aes(x = okvir_nazivi, y = n, fill = MONTH)) +
 
 
 
-```{r okvir-vs-hour-test, echo=FALSE, eval=F}
-# 2c) Kruskal-Wallis test: Is HOUR different across OKVIR categories?
-kruskal.test(MONTH ~ OKVIR, data = df)
+```{r okvir-vs-time, echo=FALSE, eval=F}
+okvirVStime <- tribble(
+  ~okvir_nazivi,                      ~MONTH,     ~n,
+  "Ekonomski okvir",                  "January",  11,
+  "Ekonomski okvir",                  "December", 10,
+  "Politički okvir",                  "January",  10,
+  "Politički okvir",                  "December",  2,
+  "Socijalni okvir",                  "January",  33,
+  "Socijalni okvir",                  "December",  5,
+  "Nacionalni/suverenitetni okvir",   "January",   2,
+  "Moralno/etički okvir",             "December",  1,
+  "Tehnološko-administrativni okvir", "January",  78,
+  "Tehnološko-administrativni okvir", "December", 75,
+  "Ostalo", "January",  8,
+  "Ostalo", "December", 1
+  # The 'Ostalo' category from your previous example is missing here.
+  # The code will handle missing combinations correctly.
+)
+
+# 3. Transform the data from long to wide format (create a contingency table)
+# The test functions need a matrix-like structure.
+contingency_table <- okvirVStime %>%
+  pivot_wider(names_from = MONTH, values_from = n, values_fill = 0) %>%
+  # pivot_wider will create 'NA' for missing combinations. 
+  # We replace them with 0 as 'NA' means a count of zero.
+  # The `values_fill = 0` argument does this for us automatically.
+  column_to_rownames("okvir_nazivi") # Set frame names as row names for the test
+
+# View the resulting contingency table
+print("Contingency Table:")
+print(contingency_table)
+
+
+# 4. Perform the Chi-Square Test of Independence
+chi_square_result <- chisq.test(contingency_table)
+
+print("Chi-Square Test Result:")
+print(chi_square_result)
+
+
+# 5. Perform Fisher's Exact Test (recommended due to low counts)
+# This test is more accurate for tables with cells containing low values.
+fisher_result <- fisher.test(contingency_table)
+
+print("Fisher's Exact Test Result:")
+print(fisher_result)
+
+
+
+
+
 
 
 ```
 
+Postoji veza između medijskih okvira i vremena objave članaka.
 
 ### 3) OKVIR x Izvor
 
@@ -320,6 +372,11 @@ df %>%
     mode_izvori = as.character(names(sort(table(IZVORI), decreasing = TRUE)[1])),
     
   ) 
+
+
+
+df %>%
+  select(OKVIR, IZVORI)
 
 ```
 
@@ -364,7 +421,7 @@ ggplot(df_izvori, aes(x = okvir_nazivi, y = mode_izvori)) +
 kruskal.test(IZVORI ~ OKVIR, data = df)
 
 ```
-
+Test je pokazao da postoji statistički značajna razlika u broju izvora između različitih medijskih okvira.
 
 ```{r echo=F, eval=F, message=F , warning= FALSE}
 tidy_text_ %>%
@@ -439,7 +496,7 @@ df %>%
     labs(
       x     = "Medijski okvir",
       y     = "Broj članaka",
-      title = "Članci po okviru i sentimentu"
+      title = ""
     ) +
     theme_minimal() +
     theme(
@@ -452,10 +509,51 @@ df %>%
 
 
 ```{r okvir-vs-sentiment-test , echo=FALSE, eval=TRUE}
-# 4c) If SENTIMENT is treated numerically, compare medians by OKVIR:
-kruskal.test(SENTIMENT ~ OKVIR, data = df)
+# 1. Create the data as a matrix.
+# The rows represent OKVIR and the columns represent sentiment (1, 2, 3).
+contingency_data <- matrix(
+  c(14, 1, 6,    # OKVIR 1
+    2,  8, 2,    # OKVIR 2
+    6, 17, 15,   # OKVIR 3
+    0,  2, 0,    # OKVIR 4
+    0,  1, 0,    # OKVIR 5
+    2, 25, 126,  # OKVIR 6
+    3,  0, 6),   # OKVIR 7
+  nrow = 7,         # There are 7 rows (for 7 OKVIR levels)
+  byrow = TRUE      # Fill the matrix row-by-row
+)
+
+# It's good practice to name the dimensions for clarity
+rownames(contingency_data) <- paste("OKVIR", 1:7)
+colnames(contingency_data) <- paste("Sentiment", 1:3)
+
+# View the final contingency table
+print("Contingency Table:")
+print(contingency_data)
+
+# 2. Perform the Chi-Square Test of Independence
+chi_square_result <- chisq.test(contingency_data)
+
+print("Chi-Square Test Result:")
+print(chi_square_result)
+
+
+# 3. Check for low expected counts and consider Fisher's Exact Test
+# The Chi-Square test will likely produce a warning due to the zeros.
+# Fisher's test is more accurate in these cases.
+# Note: Fisher's test can be computationally intensive on larger tables, but is fine here.
+fisher_result <- fisher.test(contingency_data, 
+                             simulate.p.value = TRUE, 
+                             B = 10000 ) # Number of simulations for p-value approximation)
+
+print("Fisher's Exact Test Result:")
+print(fisher_result)
+
 
 ```
+Test je pokazao da postoji statistički značajna razlika u sentimentu između različitih medijskih okvira.
+
+
 
 ### 5) OKVIR x Doseg (reach)
 
@@ -508,7 +606,7 @@ df_reach %>%
     scale_fill_grey(
       start  = 0.2,
       end    = 0.8,
-      name   = "Metrika dosega",
+      name   = "Medijski doseg",
       labels = c("Prosječni doseg", "Medijan dosega", "IQR dosega")
     ) +
     labs(
@@ -528,7 +626,7 @@ df_reach %>%
 # 5c) Kruskal-Wallis test for DOSEG ~ OKVIR
 kruskal.test(OKVIR ~ REACH, data = df)
 ```
-
+Test je pokazao da ne ostoji statistički značajna razlika u dosegu između različitih medijskih okvira.
 
 
 ```{r echo=F, eval=F, message=F , warning= FALSE}
@@ -632,7 +730,7 @@ kruskal.test(COMMENT_COUNT ~ OKVIR, data = df)
 
 ```
 
-
+Test je pokazao da postoji statistički značajna razlika u broju komentara između različitih medijskih okvira.
 
 
 
