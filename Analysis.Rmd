@@ -498,7 +498,7 @@ df %>%
       end    = 0.8,
       name   = "Sentiment",
       breaks = c("1","2","3"),
-      labels = c("Pozitivan","Neutralan","Negativan")
+      labels = c("Pozitivan","Negativan","Neutralan")
     ) +
     labs(
       x     = "Medijski okvir",
@@ -740,7 +740,32 @@ kruskal.test(COMMENT_COUNT ~ OKVIR, data = df)
 Test je pokazao da postoji statistički značajna razlika u broju komentara između različitih medijskih okvira.
 
 
+### 6) OKVIR x Naslovi
 
+```{r}
+
+
+contingency_table2 <- df %>% 
+  count(OKVIR, `TIP NASLOVA`) %>%
+  pivot_wider(
+    names_from = `TIP NASLOVA`,
+    values_from = n,
+    values_fill = 0
+  ) 
+
+
+counts_mat <- as.matrix(contingency_table2[ , -1])
+storage.mode(counts_mat) <- "numeric"
+rownames(counts_mat) <- contingency_table2[[1]]   # first column = OKVIR
+
+# sanity check
+stopifnot(all(counts_mat >= 0), all(is.finite(counts_mat)))
+
+# χ²:
+chisq.test(counts_mat)
+```
+
+Postoji statistički značajna razlika u broju naslova između različitih medijskih okvira.
 
 
 
