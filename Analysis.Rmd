@@ -515,6 +515,56 @@ df %>%
 
 
 
+```{r}
+#Vizualni prikaz subjektivnog sentimenta u cijelom korpusu
+
+df %>%
+  group_by(SENTIMENT) %>%
+  summarize(count = n())
+
+
+
+
+df %>%
+  group_by(SENTIMENT) %>%
+  summarize(count = n()) %>%
+  ggplot(aes(
+    x    = SENTIMENT,
+    y    = count,
+    fill = factor(SENTIMENT)
+  )) +
+    geom_col(
+      position = position_dodge(width = 0.8),
+      color    = "black",
+      width    = 0.7
+    ) +
+    scale_fill_grey(
+      start  = 0.2,
+      end    = 0.8,
+      name   = "Sentiment",
+      breaks = c("1","2","3"),
+      labels = c("Pozitivan","Negativan","Neutralan")
+    ) +
+    labs(
+      x     = "Sentiment",
+      y     = "Broj članaka"
+    ) +
+    theme_minimal() +
+    theme(
+      axis.text.x        = element_blank(),
+      axis.ticks.x       = element_blank(),
+      panel.grid.major.x = element_blank(),
+      panel.grid.minor   = element_blank()
+    )
+
+```
+
+
+
+
+
+
+
 ```{r okvir-vs-sentiment-test , echo=FALSE, eval=TRUE}
 # 1. Create the data as a matrix.
 # The rows represent OKVIR and the columns represent sentiment (1, 2, 3).
@@ -743,6 +793,98 @@ Test je pokazao da postoji statistički značajna razlika u broju komentara izme
 ### 6) OKVIR x Naslovi
 
 ```{r}
+df %>%
+  group_by(`TIP NASLOVA`) %>%
+  summarize(count = n()) 
+```
+
+```{r}
+df %>%
+  group_by(`TIP NASLOVA`) %>%
+  summarize(count = n()) %>%
+  ggplot(aes(
+    x    = `TIP NASLOVA`,
+    y    = count,
+    fill = factor(`TIP NASLOVA`)
+  )) +
+    geom_col(
+      position = position_dodge(width = 0.8),
+      color    = "black",
+      width    = 0.7
+    )+
+    scale_fill_grey(
+      start  = 0.3,
+      end    = 0.8,
+      name   = "Vrsta naslova",
+      breaks = c("1", "2", "3", "4"),
+      labels = c("Informativan",
+                 "Senzacionalistički",
+                 "Kritički",
+                 "Nije moguće odrediti")
+    ) +
+    labs(
+      x     = "",
+      y     = "Broj članaka",
+      title = "Članci po tipu naslova"
+    ) +
+    theme_minimal() +
+    theme(
+      axis.text.x        = element_text(angle = 0, hjust = 1),
+      panel.grid.major.x = element_blank(),
+      panel.grid.minor   = element_blank()
+    )
+```
+
+
+
+
+
+```{r}
+
+
+
+
+df %>%
+  count(okvir_nazivi, `TIP NASLOVA`) %>%
+  ggplot(aes(
+    x    = okvir_nazivi,
+    y    = n,
+    fill = factor(`TIP NASLOVA`)
+  )) +
+    geom_col(
+      position = position_dodge(width = 0.8),
+      color    = "black",
+      width    = 0.7
+    ) +
+    scale_fill_grey(
+      start  = 0.3,
+      end    = 0.8,
+      name   = "Vrsta naslova",
+      breaks = c("1", "2", "3", "4"),
+      labels = c("Informativan",
+                 "Senzacionalistički",
+                 "Kritički",
+                 "Nije moguće odrediti")
+    ) +
+    labs(
+      x     = "",
+      y     = "Broj članaka",
+      title = "Članci po okviru i tipu naslova"
+    ) +
+    theme_minimal() +
+    theme(
+      axis.text.x        = element_text(angle = 45, hjust = 1),
+      panel.grid.major.x = element_blank(),
+      panel.grid.minor   = element_blank()
+    )
+
+```
+
+
+
+
+
+```{r}
 
 
 contingency_table2 <- df %>% 
@@ -896,7 +1038,12 @@ n_token %>%
   mutate(word = gsub("^[a-zA-Z]$", NA, word)) -> n_tokenTidy
 # remove NA
 n_tokenTidy %>%
-  filter(!is.na(word)) -> n_tokenTidy
+  filter(!is.na(word)) %>%
+ 
+  #remove rows where stemmed_word contains „poslovn“ i „dnevnik“
+  filter(!grepl("poslovn|dnevnik", word, ignore.case = TRUE))-> n_tokenTidy
+
+
 
 # check
 # fb_tokenTidy  %>% 
@@ -983,7 +1130,9 @@ top_words_per_okvir <- tidy_text_ %>%
   slice_max(n, n = 15) %>%
   ungroup() %>%
   # reorder within each facet
-  mutate(stemmed_word = reorder_within(stemmed_word, n, okvir_nazivi))
+  mutate(stemmed_word = reorder_within(stemmed_word, n, okvir_nazivi)) %>%
+  #remove rows where stemmed_word contains „poslovn“ i „dnevnik“
+  filter(!grepl("poslovn|dnevnik", stemmed_word, ignore.case = TRUE))
 
 ggplot(top_words_per_okvir, aes(x = stemmed_word, y = n)) +
   geom_col(fill = "grey60", color = "black") +
@@ -991,9 +1140,9 @@ ggplot(top_words_per_okvir, aes(x = stemmed_word, y = n)) +
   coord_flip() +
   scale_x_reordered() +
   labs(
-    title = "Top 10 Stemmed Words by Medijski okvir",
-    x     = "Stemmed word",
-    y     = "Count"
+    title = "",
+    x     = "Korijen riječi",
+    y     = "Frekvencija"
   ) +
   theme_minimal() +
   theme(
@@ -1096,7 +1245,7 @@ dataset %>%
 
 
 
-doprinos_sentimentu(n_tokenTidy,30)
+doprinos_sentimentu(n_tokenTidy,20)
 
 ```
 ##### Doprinos riječi raznom sentimentu (NRC)
