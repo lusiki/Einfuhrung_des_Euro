@@ -726,8 +726,77 @@ df_komentari <- df %>%
     IQR_comments = IQR(COMMENT_COUNT, na.rm = TRUE)
   ) 
 
+
+
+str(df)
 ```
 
+```{r}
+df %>% 
+  # sum comments by date and okvir
+  group_by(DATE, okvir_nazivi) %>% 
+  summarise(total_comments = sum(KOMENTARI, na.rm = TRUE), .groups = "drop") %>% 
+  # plot a line per okvir
+  ggplot(aes(x = DATE, y = total_comments, color = okvir_nazivi)) +
+    geom_line(size = 1) +
+    labs(
+      title = "Time Series of Comments per Okvir",
+      x     = "Date",
+      y     = "Number of Comments",
+      color = "Okvir"
+    ) +
+    theme_bw() 
+```
+```{r}
+df %>%
+  # 1) Sum comments per day and okvir
+  group_by(DATE, okvir_nazivi) %>%
+  summarise(total_comments = sum(KOMENTARI, na.rm = TRUE), .groups = "drop") %>%
+  # 2) Plot with one facet per okvir
+  ggplot(aes(x = DATE, y = total_comments)) +
+    geom_line(color = "black", size = 0.8) +
+    facet_wrap(~ okvir_nazivi, scales = "free_y", ncol = 2) +
+    labs(
+      title = "Komentari kroz vrijeme po okviru",
+      x     = "Datum",
+      y     = "Broj komentara"
+    ) +
+    theme_bw() +
+    theme(
+      strip.text        = element_text(face = "bold"),
+      panel.grid.major  = element_line(size = 0.3),
+      panel.grid.minor  = element_blank()
+    )
+
+df %>%
+  # 1) Sum comments per day and okvir
+  group_by(DATE, okvir_nazivi) %>%
+  summarise(total_comments = sum(KOMENTARI, na.rm = TRUE), .groups = "drop") %>%
+  # 2) Plot with one facet per okvir
+  ggplot(aes(x = DATE, y = total_comments)) +
+    geom_line(color = "black", size = 0.8) +
+    facet_wrap(~ okvir_nazivi, scales = "free_y", ncol = 2) +
+    # 3) Numeric date labels instead of month names
+    scale_x_date(
+      date_breaks = "1 month",
+      date_labels = "%Y-%m-%d"
+    ) +
+    labs(
+      title = "",
+      x     = "Datum",
+      y     = "Broj komentara"
+    ) +
+    theme_bw() +
+    theme(
+      strip.text       = element_text(face = "bold"),
+      panel.grid.major = element_line(size = 0.3),
+      panel.grid.minor = element_blank()
+    )
+
+
+
+
+```
 
 
 
